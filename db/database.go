@@ -3,14 +3,21 @@ package db
 import (
     "context"
     "errors"
+    "log"
+    "sync"
+    "time"
+
     "go.mongodb.org/mongo-driver/bson"
     "go.mongodb.org/mongo-driver/mongo"
     "go.mongodb.org/mongo-driver/mongo/options"
-    "log"
-    "time"
 )
 
-var db *mongo.Database
+var (
+    dbInstance    *mongo.Database
+    clientInstance *mongo.Client
+    clientInstanceErr error
+    mongoOnce         sync.Once
+)
 
 type ModeUsage struct {
     AreaCode    string `bson:"area_code"`
@@ -18,33 +25,41 @@ type ModeUsage struct {
     PlayerCount int    `bson:"player_count"`
 }
 
+// InitializeMongoDB sets up the MongoDB connection using a singleton pattern.
+func InitializeMongoDB(uri, dbName string) *mongo.Database {
+    mongoOnce.Do(func() {
+        log.Printf("Initializing MongoDB client...")
 
-func InitMongoDB(uri string, dbName string) {
-    clientOptions := options.Client().ApplyURI(uri)
-    
-    client, err := mongo.Connect(context.TODO(), clientOptions)
-    if err != nil {
-        log.Fatalf("Failed to connect to MongoDB at %s: %v\n", uri, err)
-    }
-    
+        clientOptions := options.Client().ApplyURI(uri)
+        ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+        defer cancel()
 
-    db = client.Database(dbName)
-    
-    err = client.Ping(context.TODO(), nil)
-    if err != nil {
-        log.Fatalf("Failed to ping MongoDB: %v\n", err)
-    }
-    
-    log.Printf("Successfully connected to MongoDB at %s, using database: %s\n", uri, dbName)
+        clientInstance, clientInstanceErr = mongo.Connect(ctx, clientOptions)
+        if clientInstanceErr != nil {
+            log.Fatalf("Failed to connect to MongoDB at %s: %v\n", uri, clientInstanceErr)
+        }
+
+        dbInstance = clientInstance.Database(dbName)
+
+        err := clientInstance.Ping(ctx, nil)
+        if err != nil {
+            log.Fatalf("Failed to ping MongoDB: %v\n", err)
+        }
+
+        log.Printf("Successfully connected to MongoDB at %s, using database: %s\n", uri, dbName)
+    })
+
+    return dbInstance
 }
 
+// GetDB provides the singleton MongoDB database instance.
 func GetDB() *mongo.Database {
-    return db
+    return dbInstance
 }
 
-
+// GetPopularModeByArea retrieves the most popular mode by area code from MongoDB.
 func GetPopularModeByArea(areaCode string) (string, int, error) {
-    collection := db.Collection("mode_usage")
+    collection := GetDB().Collection("mode_usage")
 
     filter := bson.M{"area_code": areaCode}
     opts := options.FindOne().SetSort(bson.D{{"player_count", -1}})
@@ -62,6 +77,5 @@ func GetPopularModeByArea(areaCode string) (string, int, error) {
         return "", 0, err
     }
 
-    return result.ModeName, result.PlayerCount, nil 
+    return result.ModeName, result.PlayerCount, nil
 }
-

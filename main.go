@@ -19,7 +19,7 @@ func main() {
 
     
     cache.InitRedis(cfg.RedisAddress)
-    db.InitMongoDB(cfg.MongoURI, cfg.MongoDBName)
+  db.InitializeMongoDB(cfg.MongoURI, cfg.MongoDBName)
     r := mux.NewRouter()
     r.HandleFunc("/popular/{area_code}", handler.GetPopularModeHandler).Methods("GET")
 
