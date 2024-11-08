@@ -21,9 +21,9 @@ func GetPopularMode(areaCode string) (string, int32, error) {
         return "", 0, err
     }
 
-cacheErr := cache.SetPopularModeCache(areaCode, mode, int32(dbCount), 5*time.Minute)
+    cacheErr := cache.SetPopularModeCache(areaCode, mode, int32(dbCount), 5*time.Minute)
     if cacheErr != nil {
-        log.Printf("Error setting cache for area code: %s: %v", areaCode, cacheErr)
+        log.Printf("Error setting cache for area code: %s: %v. However, returning data from DB.", areaCode, cacheErr)
     } else {
         log.Printf("Cache set for area code: %s, Most Played Mode: %s, Player Count: %d for 5 minutes", areaCode, mode, dbCount)
     }
