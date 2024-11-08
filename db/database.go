@@ -25,7 +25,6 @@ type ModeUsage struct {
     PlayerCount int    `bson:"player_count"`
 }
 
-// InitializeMongoDB sets up the MongoDB connection using a singleton pattern.
 func InitializeMongoDB(uri, dbName string) *mongo.Database {
     mongoOnce.Do(func() {
         log.Printf("Initializing MongoDB client...")
@@ -52,12 +51,10 @@ func InitializeMongoDB(uri, dbName string) *mongo.Database {
     return dbInstance
 }
 
-// GetDB provides the singleton MongoDB database instance.
 func GetDB() *mongo.Database {
     return dbInstance
 }
 
-// GetPopularModeByArea retrieves the most popular mode by area code from MongoDB.
 func GetPopularModeByArea(areaCode string) (string, int, error) {
     collection := GetDB().Collection("mode_usage")
 
