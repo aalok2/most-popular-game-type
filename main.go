@@ -8,7 +8,7 @@ import (
     "multiplayer-mode-usage/config"
     "multiplayer-mode-usage/db"
     "multiplayer-mode-usage/cache"
-    "multiplayer-mode-usage/handler"
+    "multiplayer-mode-usage/routes"
 )
 
 func main() {
@@ -17,15 +17,17 @@ func main() {
 
     fmt.Printf("Loaded Config: Redis Address - %s, Mongo URI - %s, Mongo DB Name - %s\n", cfg.RedisAddress, cfg.MongoURI, cfg.MongoDBName)
 
-    
     cache.InitRedis(cfg.RedisAddress)
-  db.InitializeMongoDB(cfg.MongoURI, cfg.MongoDBName)
-    r := mux.NewRouter()
-    r.HandleFunc("/popular/{area_code}", handler.GetPopularModeHandler).Methods("GET")
+
+    db.InitializeMongoDB(cfg.MongoURI, cfg.MongoDBName)
+
+    router := mux.NewRouter()
+
+    routes.SetupRoutes(router)
 
     log.Printf("Server starting on port 8080...")
 
-    err := http.ListenAndServe(":8080", r)
+    err := http.ListenAndServe(":8080" , router)
     if err != nil {
         log.Fatalf("Failed to start server: %v", err)
     }
